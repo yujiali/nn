@@ -1,7 +1,7 @@
-
 import numpy as np
 
 def softmax(X, W):
+    """exp(X*W) normalized."""
     [n, m] = X.shape
     A = X.dot(W)
     A = np.exp(A - A.max(axis=1).reshape(n,1))
@@ -10,18 +10,26 @@ def softmax(X, W):
     return A
 
 def vec_to_mat(t, K):
+    """Convert a vector of prediction or labels into a 1-of-K matrix
+    representation."""
     if isinstance(t, list):
         ncases = len(t)
     else:   # t is a numpy array
         ncases = t.size
 
-    T = np.zeros((ncases, K))
+    T = np.zeros((ncases, K), dtype=np.int)
     for i in range(0, ncases):
-        T[i][t[i]] = 1
+        k = t[i]
+        if isinstance(k, np.ndarray):
+            T[i][k[0]] = 1
+        else:
+            T[i][k] = 1
 
     return T
 
 def loss_vec_mat(t, T):
+    """Compute the loss of prediction vector t, given the ground truth matrix
+    T, in a 1-of-K representation."""
     [n, K] = T.shape
     loss = 0
     for i in range(0, n):
@@ -30,6 +38,10 @@ def loss_vec_mat(t, T):
 
     return loss
 
+def square_loss(Y, T):
+    """Compute element-wise square error of the prediction matrix Y and ground
+    truth matrix T."""
+    return ((Y - T) * (Y - T)).sum() / 2
 
 
 class ActivationTypeError(Exception):
@@ -120,6 +132,7 @@ class Config:
     PAR_NUM_EPOCHS = 'num_epochs'
     PAR_EPOCH_TO_DISPLAY = 'epoch_to_display'
     PAR_EPOCH_TO_SAVE = 'epoch_to_save'
+    PAR_RANDOM_SEED = 'random_seed'
 
     LAYER_TYPE = 'type'
     LAYER_OUT_DIM = 'out_dim'
@@ -149,6 +162,7 @@ class Config:
         self.epoch_to_display = 10
         self.epoch_to_save = 100
         self.num_epochs = 1000
+        self.random_seed = None
 
         # information for each layer, read from the file
         self.num_layers = 0
@@ -191,24 +205,32 @@ class Config:
 
         # parse parameter section
         if cfg.has_option(Config.SEC_PARAMETERS, Config.PAR_LEARN_RATE):
-            self.learn_rate = float(cfg.get(Config.SEC_PARAMETERS, Config.PAR_LEARN_RATE))
+            self.learn_rate = float(cfg.get(Config.SEC_PARAMETERS, 
+                Config.PAR_LEARN_RATE))
         if cfg.has_option(Config.SEC_PARAMETERS, Config.PAR_INIT_SCALE):
-            self.init_scale = float(cfg.get(Config.SEC_PARAMETERS, Config.PAR_INIT_SCALE))
+            self.init_scale = float(cfg.get(Config.SEC_PARAMETERS, 
+                Config.PAR_INIT_SCALE))
         if cfg.has_option(Config.SEC_PARAMETERS, Config.PAR_MOMENTUM):
-            self.momentum = float(cfg.get(Config.SEC_PARAMETERS, Config.PAR_MOMENTUM))
+            self.momentum = float(cfg.get(Config.SEC_PARAMETERS, 
+                Config.PAR_MOMENTUM))
         if cfg.has_option(Config.SEC_PARAMETERS, Config.PAR_WEIGHT_DECAY):
-            self.weight_decay = float(cfg.get(Config.SEC_PARAMETERS, Config.PAR_WEIGHT_DECAY))
+            self.weight_decay = float(cfg.get(Config.SEC_PARAMETERS, 
+                Config.PAR_WEIGHT_DECAY))
         if cfg.has_option(Config.SEC_PARAMETERS, Config.PAR_MINIBATCH_SIZE):
             self.minibatch_size = int(cfg.get(Config.SEC_PARAMETERS, 
                 Config.PAR_MINIBATCH_SIZE))
         if cfg.has_option(Config.SEC_PARAMETERS, Config.PAR_NUM_EPOCHS):
-            self.num_epochs = int(cfg.get(Config.SEC_PARAMETERS, Config.PAR_NUM_EPOCHS))
+            self.num_epochs = int(cfg.get(Config.SEC_PARAMETERS, 
+                Config.PAR_NUM_EPOCHS))
         if cfg.has_option(Config.SEC_PARAMETERS, Config.PAR_EPOCH_TO_DISPLAY):
             self.epoch_to_display = int(cfg.get(Config.SEC_PARAMETERS, 
                 Config.PAR_EPOCH_TO_DISPLAY))
         if cfg.has_option(Config.SEC_PARAMETERS, Config.PAR_EPOCH_TO_SAVE):
             self.epoch_to_save = int(cfg.get(Config.SEC_PARAMETERS, 
                 Config.PAR_EPOCH_TO_SAVE))
+        if cfg.has_option(Config.SEC_PARAMETERS, Config.PAR_RANDOM_SEED):
+            self.random_seed = int(cfg.get(Config.SEC_PARAMETERS,
+                Config.PAR_RANDOM_SEED))
 
         # parse layer specifications
         for i in range(1, self.num_layers + 1):
